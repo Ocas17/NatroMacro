@@ -28,7 +28,7 @@
     nm_Walk(3, BackKey)
     nm_Walk(26, LeftKey)
     nm_Walk(1, FwdKey, LeftKey)
-    HyperSleep(300)
+    sleep 300
 }
 else
 {
@@ -37,29 +37,19 @@ else
     send "{e down}"
     HyperSleep(100)
     send "{e up}{" RightKey " down}{" BackKey " down}"
-    HyperSleep(925)
+    HyperSleep(800)
     send "{space 2}"
-    HyperSleep(2850)
+    HyperSleep(4500)
     send "{" BackKey " up}"
-    HyperSleep(1450)
-    send "{space}{" RightKey " up}"
-    HyperSleep(600)
-    ;corner align
-    nm_Walk(10, FwdKey, LeftKey)
-    nm_Walk(10, LeftKey, FwdKey)
-    nm_Walk(1, BackKey)
-    HyperSleep(200)
-    nm_Walk(25, RightKey)
-    Hypersleep(200)
+    HyperSleep(500)
+    send "{" RightKey " up}{space}"
+    Sleep 2000
+    nm_Walk(18, RightKey)
+    nm_Walk(36, FwdKey)
+    nm_Walk(12, RightKey)
+    nm_Walk(29, FwdKey)
+    nm_Walk(6, BackKey)
+    nm_Walk(5, FwdKey, RightKey)
     send "{" RotRight " 2}"
-    Hypersleep(200)
-    ;inside badge shop
-    nm_Walk(15, FwdKey)
-    nm_Walk(1, FwdKey, RightKey)
-    ;align with corner
-    nm_Walk(7, FwdKey)
-    nm_Walk(3, BackKey)
-    nm_Walk(26, LeftKey)
-    nm_Walk(1, FwdKey, LeftKey)
-    HyperSleep(300)
+    Sleep 300
 }

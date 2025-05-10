@@ -1,72 +1,47 @@
-﻿If ((HiveBees < 25) || (MoveMethod = "Walk")) {
-	nm_Walk(31, FwdKey)
-	nm_Walk(75, RightKey)
-	send "{" RotLeft " 4}"
-	Sleep(50)
-	nm_Walk(20, FwdKey)
-	nm_Walk(3, FwdKey, LeftKey)
-	nm_Walk(18, FwdKey)
-	nm_Walk(6, FwdKey, RightKey)
-	nm_Walk(10, RightKey)
-	nm_Walk(2, LeftKey)
-	send "{" FwdKey " down}"
-	Walk(6)
-	send "{" SC_Space " down}"
-	HyperSleep(200)
-	send "{" SC_Space " up}"
-	Walk(108)
-	send "{" FwdKey " up}"
-
-	switch HiveSlot
-		{
-		case 3:
-		nm_Walk(2.7, BackKey) ;center on hive pad 3
-
-		default:
-		nm_Walk(1.5, BackKey) ;walk backwards to avoid thicker hives
-		nm_Walk(35, RightKey) ;walk to ramp
-		nm_Walk(2.7, BackKey) ;center with hive pads
+﻿; camera rotation/zoom stuff
+send("{" RotUp " 11}"), sleep(100), send("{" RotDown " 4}")
+loop 5
+    send("{" ZoomIn "}"), sleep(50)
+; corner aligning to the pine tree field
+nm_Walk(15, LeftKey, FwdKey), nm_Walk(6, FwdKey), nm_Walk(6, LeftKey)
+; from the corner towards the cannon area
+nm_Walk(23, BackKey, RightKey), nm_Walk(36, BackKey), nm_Walk(7, BackKey, RightKey), nm_Walk(8, BackKey)
+; going up to the cannon
+send("{" SC_Space " down}"), HSleep(100)
+send "{" SC_Space " up}"
+nm_Walk(5, BackKey), sleep(500), nm_Walk(3, RightKey), nm_Walk(7, FwdKey), nm_Walk(8, BackKey)
+send "{" SC_LShift "}" ; enable shift-lock
+loop 4
+    send("{" RotRight "}"), Sleep(30)
+sleep(100)
+; using the cannon
+send("{" SC_E " down}"), HSleep(10)
+send("{" SC_E " up}"), HSleep(10)
+loop 2 ; enable glider
+    send("{" SC_Space " down}"), HSleep(200), send("{" SC_Space " up}"), HSleep(200)
+HSleep(3800)
+; disabling glider
+send("{" SC_Space " down}"), HSleep(100)
+send("{" SC_Space " up}"), sleep(500)
+; going to the "ramp"
+send "{" SC_LShift "}" ; disable shift-lock
+nm_Walk(3.5, BackKey), nm_Walk(2, RightKey), nm_Walk(2, FwdKey), nm_Walk(14, RightKey), nm_Walk(4, FwdKey), nm_Walk(5, BackKey, LeftKey)
+loop 4 ; zooming out
+    send("{" ZoomOut "}"), sleep(50)
+sleep(100)
+HSleep(ms) { ; less resourseful hypersleep, made by .ninju.
+	s := QPC()
+	while (e:= QPC() - s) < ms {
+		switch {
+			case ms - e > 25: DllCall("Sleep", "uint", ms - e - 22)
+			case ms - e > 8: DllCall("winmm.dll\timeBeginPeriod", "uint", 5), DllCall("Sleep", "uint", 1), DllCall("winmm.dll\timeEndPeriod", "uint", 5)
+			case ms - e > 3: DllCall("winmm.dll\timeBeginPeriod", "uint", 1), DllCall("Sleep", "uint", 1), DllCall("winmm.dll\timeEndPeriod", "uint", 1)
 		}
 	}
-else {
-	nm_Walk(31, FwdKey)
-	nm_Walk(75, RightKey)
-	send "{" RotLeft " 4}"
-	Sleep(50)
-	nm_Walk(20, FwdKey)
-	nm_Walk(3, FwdKey, LeftKey)
-	nm_Walk(18, FwdKey)
-	nm_Walk(6, FwdKey, RightKey)
-	nm_Walk(10, RightKey)
-	nm_Walk(2, LeftKey)
-	send "{" FwdKey " down}"
-	Walk(6)
-	send "{" SC_Space " down}"
-	HyperSleep(200)
-	send "{" SC_Space " up}"
-	HyperSleep(200)
-	send "{" SC_Space " down}"
-	HyperSleep(200)
-	send "{" SC_Space " up}"
-	HyperSleep(3000)
-	send "{" FwdKey " up}"
-	HyperSleep(2600)
-	nm_Walk(15, FwdKey)
-
-	switch HiveSlot
-		{
-		case 3:
-		nm_Walk(2.7, BackKey) ;center on hive pad 3
-
-		default:
-		nm_Walk(1.5, BackKey) ;walk backwards to avoid thicker hives
-		nm_Walk(35, RightKey) ;walk to ramp
-		nm_Walk(2.7, BackKey) ;center with hive pads
-		}
+	return QPC() - s
 }
-
-;added MoveMethod condition to no-glider option misc 181123
-;slightly altered tile measurements and optimised glider deployment SP 230405
-;path with and without glider zaappiix 230212
-; [2024-01-15/rpertusio] Avoid using corner (Hive 1 and ramp) where character gets stuck after 2024-01-12 BSS update
-; [2024-01-15/rpertusio] Aligns with default SpawnLocation, saves walking if player chose Hive 3
+QPC() {
+    static _:=0, f := (DllCall("QueryPerformanceFrequency", "int64p", &_),_ /= 1000)
+    return (DllCall("QueryPerformanceCounter", "int64p", &_), _ / f)
+}
+; made by dully176 with care

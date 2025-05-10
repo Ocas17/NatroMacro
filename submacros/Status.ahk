@@ -82,6 +82,10 @@ DebugLogEnabled := A_Args[34]
 MonsterRespawnTime := A_Args[35]
 
 HoneyUpdateSSCheck := A_Args[36]
+FieldFollowingCheck := A_Args[37]
+FieldFollowingFollowMode := A_Args[38]
+FieldFollowingMaxTime := A_Args[39]
+FieldFollowingChannelID := A_Args[40]
 
 pToken := Gdip_Startup()
 OnExit(ExitFunc)
@@ -90,9 +94,50 @@ OnMessage(0xC2, nm_setStatus, 255)
 OnMessage(0x5552, nm_setGlobalInt, 255)
 OnMessage(0x5553, nm_setGlobalStr, 255)
 OnMessage(0x5556, nm_sendHeartbeat)
+OnMessage(0x5561, aq_announce)
 OnMessage(0x5559, nm_sendItemPicture)
 
 discord.SendEmbed("Connected to Discord!", 5066239)
+
+macroStarted := 0 ;is macro started?
+
+index_field_map := Map()
+index_field_map[1] := "Bamboo"
+index_field_map[2] := "Blue Flower"
+index_field_map[3] := "Cactus"
+index_field_map[4] := "Clover"
+index_field_map[5] := "Coconut"
+index_field_map[6] := "Dandelion"
+index_field_map[7] := "Mountain Top"
+index_field_map[8] := "Mushroom"
+index_field_map[9] := "Pepper"
+index_field_map[10] := "Pineapple"
+index_field_map[11] := "Pine Tree"
+index_field_map[12] := "Pumpkin"
+index_field_map[13] := "Rose"
+index_field_map[14] := "Spider"
+index_field_map[15] := "Strawberry"
+index_field_map[16] := "Stump"
+index_field_map[17] := "Sunflower"
+
+field_index_map := Map(), field_index_map.CaseSense := 0
+field_index_map["bamboo"] := 1
+field_index_map["blueflower"] := 2
+field_index_map["cactus"] := 3
+field_index_map["clover"] := 4
+field_index_map["coconut"] := 5
+field_index_map["dandelion"] := 6
+field_index_map["mountaintop"] := 7
+field_index_map["mushroom"] := 8
+field_index_map["pepper"] := 9
+field_index_map["pineapple"] := 10
+field_index_map["pinetree"] := 11
+field_index_map["pumpkin"] := 12
+field_index_map["rose"] := 13
+field_index_map["spider"] := 14
+field_index_map["strawberry"] := 15
+field_index_map["stump"] := 16
+field_index_map["sunflower"] := 17
 
 planters := Map(), planters.CaseSense := 0
 planters["blueclayplanter"] := {bitmap: Gdip_BitmapFromBase64("iVBORw0KGgoAAAANSUhEUgAAACgAAAAoCAMAAAC7IEhfAAAB2lBMVEUAAAAeHh42NjY1NTUyMjIoKCgkJCQaGho1NTU2NjYzMzM0NDQzMzMvLy8tLS0qKio2NjY2NjYzMzM0NDQxMTEuLi4uLi4qKio2NjY1NTU0NDQsLCwvLy8kJCQyMjIzMzMzMzMzMzMyMjI0NDQ1NTUyMjIyMjIxMTEvLy8wMDEtLS0tLS05WbpAZs8/UH82NjY2NjdAZs5NcddAZcw4WLZOctg2N0I1NjY5WrsyTqE4WLg3V7QyT6Q5Wrg1VLE/UIJMb9Y9Ycc6W70tSJU+UYRMb9NFadFCZ9BBZ85Mbco4VbEzUKc3UKYxTZ4sRpM3O0w1Nz01NztJbdVFaM1KacJBYLo2VrMwTKAuSpo/VJE3TJFAU403SYo/Uoc4R3s3RHA6QmQ3P2A2PVc2O1E2NjlNb9BHactBZMlGZ8ZFZL40VK40U6w3U6szUqpAWaQ2Tp88U5wwTJw1SY03Qmw2QGk2OkdGa9NHa9JJa88+ZMpKasg6XcBEYbU8W643VK1EXqo4U6Y3UaItSJc6To41RYs/Uok3RXg3PVtEZsJAYcI/YL4+XbdBXbFGYK9EXKM2TZo/VplBVpY3TJU7TIo7S4c4SIIyO1xKbM9CZMY8X8I4Va49UJIuQ4U1QYKebRTcAAAALHRSTlMABP33xTITCfH73sqGY0Ia6uK7tXtMLB3awKxGOyWwpZmTb9fQzoBsW1lZI7SYQXAAAANuSURBVDjLfdVnV9pQGMDxECxiAdFau/ceofdmEPaSpSAbyl6Ce++9q3bvPb5rb5KCKNj/i5wc7i95yD05J1i1ZuUjheJGE5dMDABoa2q6pLjcjB3rqvyOVAMAhGwgECj1FQulAAsBaGm/eUVUwx7fbAOh+YLjw9s30R5Uf79z6MWrqc/5+TIUXzpfdecuQPbJmxUnRanVFGV19vesDD1/8Z2m6ZdTsyHQpBSY6NQFWFhDxvptYGj49cT79J7DYbE4ssmJWPfC4BQLLgr/9JYUFqKUMxKbSO45LE9qs2xSVOQTFPPDr0qDuRVrZDOJTF3ZAbUzNo8rOHgK7EeskYknDUsuqRcHD8BZHmo+dbvpZEOXfq6m3HShAr/QKvK1o05Z9t5GKcqlomfBPQHmaZWKjL1PZy0CcGSz6fSHzWg/2ioXqSJzQCbiYXFQhepe6okOD6+txYaHBgaWnJSasi64uAXyMzzNwXMtgZc8DFspCi2r+ajwoptEd+PgrgCbb7OvOIio2+1aCIfDiy6Xu1t12C8BYnfL66qGkSqhXY0AZXCXbKyE6DwQ4Fm8OPgfSK6zsAPjOi8OTdHkSdOXuw6guJWHzTLIrp8EbV0eFl5vrr6O+zYVeYygaNuqltgKwU7sX514ybBqs9F8JIkOy8s2249VrZYgiMlyS2sFSqTBbcJEaLXaLi5unSNCKdimrEBRB8gQJ/R0JoTfxyopYF5fb7ifGKP9K7hWha0tfRtmhl98ahZOmFGj0WvWj0/7v4KOKryM9037vHo0yDid8BnN6ILxhN/u03l99t8suH54Rzw4s7MzQph1dr8/odONGrwJf3x0XKfz2UsacWcVSmQgN2JPGOM7du+IwaxDwB9n0IDRke2gRi7Camcbxqd18biZf1Kv0WhEjusdxK9ihymlwS1Cb2CIujKgXVIDRWfgDNGwHDiD1SYHc3pTA8fMHYOdOLtNHMZfM+Yhenv7wI0jUHIRzDFEr8FEML0MQuhgmpkkNj4GwQPsSK3i0EfTs0kt4fnjQROf/UR4TD9W1IivHIWia+DAMDbJGY8J7YoBnW1kShrNJRF2tHNt5RSDCMFvEuPZSs3OQ4CfkWDHkwN2bnb/SyaVyuTyxQBb1kC8/Wy9w863AwAgH+BqEV98qMQadaoDB5Wk8ltXJLXfjr8sUSDBBtdhwQAAAABJRU5ErkJggg==")
@@ -652,10 +697,43 @@ Loop
 {
 	(status_buffer.Length > 0) && nm_status(status_buffer[1])
 	(Mod(A_Index, 5) = 0) && discord.GetCommands(MainChannelID)
+	(Mod(A_Index, 5) = 0 && FieldFollowingCheck) && aq_getFollowingField()
 	(command_buffer.Length > 0) && nm_command(command_buffer[1])
 	(Mod(A_Index, 10) = 0) && nm_honey()
 	((DebugLogEnabled = 1) && (logsize > 8000000)) && nm_TrimLog(4194304) ; trim to 4MiB
+
 	Sleep 100
+}
+
+aq_getFollowingField()
+{
+	global FieldFollowingFollowMode, FieldFollowingChannelID, MacroState, field_index_map
+
+	messages := discord.GetRecentMessages(FieldFollowingChannelID)
+
+	if (messages && messages != -1) {
+		for message in messages {
+			if (FieldFollowingFollowMode = "Follower" && InStr(message["content"], "FollowTo")) {
+				field := StrSplit(message["content"], " ")[2]
+				if (field && MacroState>0) {
+					DetectHiddenWindows 1
+					if WinExist("natro_macro ahk_class AutoHotkey")
+						PostMessage 0x5559, field_index_map[field]
+					DetectHiddenWindows 0
+					break
+				}
+			}
+		}
+	}
+}
+
+aq_announce(wParam, *)
+{
+	global FieldFollowingChannelID, index_field_map
+	fieldarg := StrReplace(index_field_map[wParam], " ")
+
+	payload_json := '{"content": "FollowTo ' fieldarg '"}'
+	discord.SendMessageAPI(payload_json, "application/json", FieldFollowingChannelID)
 }
 
 nm_status(status)
@@ -2800,7 +2878,7 @@ nm_setGlobalStr(wParam, lParam, *)
 	local var
 	; enumeration
 	#Include %A_ScriptDir%\..\lib\enum\EnumStr.ahk
-	static sections := ["Boost","Collect","Gather","Planters","Quests","Settings","Status","Blender","Shrine"]
+	static sections := ["Boost","Collect","Gather","Planters","Quests","Settings","Status","Blender","Shrine", "Extensions"]
 
 	var := arr[wParam], section := sections[lParam]
 	%var% := IniRead(A_ScriptDir "\..\settings\nm_config.ini", section, var)

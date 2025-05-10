@@ -106,7 +106,8 @@ OnMessage(0x5555, nm_backgroundEvent, 255)
 OnMessage(0x5556, nm_sendHeartbeat)
 OnMessage(0x5557, nm_ForceReconnect)
 OnMessage(0x5558, nm_AmuletPrompt)
-OnMessage(0x5559, nm_FindItem)
+OnMessage(0x5560, nm_FindItem)
+OnMessage(0x5559, aq_followToField)
 
 ; set version identifier
 VersionID := "1.0.1"
@@ -838,6 +839,18 @@ nm_importConfig()
 		, "TimerY", 150
 		, "TimersOpen", 0)
 
+		config["Extensions"] := Map(
+		"FollowingLeader", 0,
+		"FollowingField", "",
+		"FollowingStartTime", 0,
+		"LastAnnouncedField", "",
+		"FieldFollowingCheck", 0,
+		"FieldFollowingFollowMode", "",
+		"FieldFollowingMaxTime", "",
+		"FieldFollowingChannelID", "",
+		"PFieldBoosted", 0,
+		)	
+
 	local k, v, i, j
 	for k,v in config ; load the default values as globals, will be overwritten if a new value exists when reading
 		for i,j in v
@@ -895,6 +908,45 @@ RefreshingFields:=["Coconut", "Strawberry", "Blue Flower"]
 SatisfyingFields:=["Pineapple", "Sunflower", "Pumpkin"]
 MotivatingFields:=["Stump", "Spider", "Mushroom", "Rose"]
 InvigoratingFields:=["Pepper", "Mountain Top", "Clover", "Cactus"]
+
+index_field_map := Map()
+index_field_map[1] := "Bamboo"
+index_field_map[2] := "Blue Flower"
+index_field_map[3] := "Cactus"
+index_field_map[4] := "Clover"
+index_field_map[5] := "Coconut"
+index_field_map[6] := "Dandelion"
+index_field_map[7] := "Mountain Top"
+index_field_map[8] := "Mushroom"
+index_field_map[9] := "Pepper"
+index_field_map[10] := "Pineapple"
+index_field_map[11] := "Pine Tree"
+index_field_map[12] := "Pumpkin"
+index_field_map[13] := "Rose"
+index_field_map[14] := "Spider"
+index_field_map[15] := "Strawberry"
+index_field_map[16] := "Stump"
+index_field_map[17] := "Sunflower"
+
+field_index_map := Map(), field_index_map.CaseSense := 0
+field_index_map["bamboo"] := 1
+field_index_map["blueflower"] := 2
+field_index_map["cactus"] := 3
+field_index_map["clover"] := 4
+field_index_map["coconut"] := 5
+field_index_map["dandelion"] := 6
+field_index_map["mountaintop"] := 7
+field_index_map["mushroom"] := 8
+field_index_map["pepper"] := 9
+field_index_map["pineapple"] := 10
+field_index_map["pinetree"] := 11
+field_index_map["pumpkin"] := 12
+field_index_map["rose"] := 13
+field_index_map["spider"] := 14
+field_index_map["strawberry"] := 15
+field_index_map["stump"] := 16
+field_index_map["sunflower"] := 17
+
 
 ;field planters ordered from best to worst (will always try to pick the best planter for the field)
 ;planters that provide no bonuses at all are ordered by worst to best so it can preserve the "better" planters for other nectar types
@@ -1981,7 +2033,7 @@ PopStarActive:=0
 PreviousAction:="None"
 CurrentAction:="Startup"
 fieldnamelist := ["Bamboo","Blue Flower","Cactus","Clover","Coconut","Dandelion","Mountain Top","Mushroom","Pepper","Pine Tree","Pineapple","Pumpkin","Rose","Spider","Strawberry","Stump","Sunflower"]
-hotbarwhilelist := ["Never","Always","At Hive","Gathering","Attacking","Microconverter","Whirligig","Enzymes","GatherStart","Snowflake"]
+hotbarwhilelist := ["Never","Always","At Hive","Gathering","Attacking","Microconverter","Whirligig","Enzymes","GatherStart","Snowflake","Glitter"]
 sprinklerImages := ["saturator"]
 ReconnectDelay:=0
 GatherStartTime := ConvertStartTime := 0
@@ -2011,14 +2063,8 @@ ActiveHotkeys:=[]
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; RUN STATUS HANDLER
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-Run
-(
-'"' exe_path64 '" /script "' A_WorkingDir '\submacros\Status.ahk" '
-'"' discordMode '" "' discordCheck '" "' webhook '" "' bottoken '" "' MainChannelCheck '" "' MainChannelID '" "' ReportChannelCheck '" "' ReportChannelID '" '
-'"' WebhookEasterEgg '" "' ssCheck '" "' ssDebugging '" "' CriticalSSCheck '" "' AmuletSSCheck '" "' MachineSSCheck '" "' BalloonSSCheck '" "' ViciousSSCheck '" '
-'"' DeathSSCheck '" "' PlanterSSCheck '" "' HoneySSCheck '" "' criticalCheck '" "' discordUID '" "' CriticalErrorPingCheck '" "' DisconnectPingCheck '" "' GameFrozenPingCheck '" '
-'"' PhantomPingCheck '" "' UnexpectedDeathPingCheck '" "' EmergencyBalloonPingCheck '" "' commandPrefix '" "' NightAnnouncementCheck '" "' NightAnnouncementName '" '
-'"' NightAnnouncementPingID '" "' NightAnnouncementWebhook '" "' PrivServer '" "' DebugLogEnabled '" "' MonsterRespawnTime '" "' HoneyUpdateSSCheck '"'
+Run(
+    '"' . exe_path64 . '" /script "' . A_WorkingDir . '\submacros\Status.ahk" "' . discordMode . '" "' . discordCheck . '" "' . webhook . '" "' . bottoken . '" "' . MainChannelCheck . '" "' . MainChannelID . '" "' . ReportChannelCheck . '" "' . ReportChannelID . '" "' . WebhookEasterEgg . '" "' . ssCheck . '" "' . ssDebugging . '" "' . CriticalSSCheck . '" "' . AmuletSSCheck . '" "' . MachineSSCheck . '" "' . BalloonSSCheck . '" "' . ViciousSSCheck . '" "' . DeathSSCheck . '" "' . PlanterSSCheck . '" "' . HoneySSCheck . '" "' . criticalCheck . '" "' . discordUID . '" "' . CriticalErrorPingCheck . '" "' . DisconnectPingCheck . '" "' . GameFrozenPingCheck . '" "' . PhantomPingCheck . '" "' . UnexpectedDeathPingCheck . '" "' . EmergencyBalloonPingCheck . '" "' . commandPrefix . '" "' . NightAnnouncementCheck . '" "' . NightAnnouncementName . '" "' . NightAnnouncementPingID . '" "' . NightAnnouncementWebhook . '" "' . PrivServer . '" "' . DebugLogEnabled . '" "' . MonsterRespawnTime . '" "' . FieldFollowingCheck . '" "' . FieldFollowingFollowMode . '" "' . FieldFollowingMaxTime . '" "' . FieldFollowingChannelID . '" "' . HoneyUpdateSSCheck . '"'
 )
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -2063,7 +2109,6 @@ A_TrayMenu.Add()
 A_TrayMenu.Add("Open Logs", (*) => ListLines())
 A_TrayMenu.Add("Copy Logs", copyLogFile)
 A_TrayMenu.Add()
-
 A_TrayMenu.Add("Edit This Script", (*) => Edit())
 A_TrayMenu.Add("Suspend Hotkeys", (*) => (A_TrayMenu.ToggleCheck("Suspend Hotkeys"), Suspend()))
 A_TrayMenu.Add()
@@ -2288,7 +2333,7 @@ MainGui.SetFont("s8 cDefault Norm", "Tahoma")
 MainGui.Add("Button", "x5 y260 w65 h20 -Wrap Disabled vStartButton", " Start (" StartHotkey ")").OnEvent("Click", nm_StartButton)
 MainGui.Add("Button", "x75 y260 w65 h20 -Wrap Disabled vPauseButton", " Pause (" PauseHotkey ")").OnEvent("Click", nm_PauseButton)
 MainGui.Add("Button", "x145 y260 w65 h20 -Wrap Disabled vStopButton", " Stop (" StopHotkey ")").OnEvent("Click", nm_StopButton)
-for k,v in ["PMondoGuid","PMondoGuidComplete","PFieldBoosted","PFieldGuidExtend","PFieldGuidExtendMins","PFieldBoostExtend","PPopStarExtend"]
+for k,v in ["PMondoGuid","PMondoGuidComplete","PFieldGuidExtend","PFieldGuidExtendMins","PFieldBoostExtend","PFieldBoostBypass","PPopStarExtend"]
 	%v%:=0
 #include "*i %A_ScriptDir%\..\settings\personal.ahk"
 
@@ -2491,7 +2536,7 @@ MainGui.Add("GroupBox", "x5 y168 w160 h62", "Other Tools")
 MainGui.Add("GroupBox", "x170 y24 w160 h144", "Calculators")
 MainGui.Add("GroupBox", "x170 y168 w160 h62 vAutoClickerButton", "AutoClicker (" AutoClickerHotkey ")")
 MainGui.Add("GroupBox", "x335 y24 w160 h84", "Macro Tools")
-MainGui.Add("GroupBox", "x335 y108 w160 h60", "Discord Tools")
+MainGui.Add("GroupBox", "x335 y108 w160 h60", "Unofficial Extensions")
 MainGui.Add("GroupBox", "x335 y168 w160 h62", "Bugs and Suggestions")
 MainGui.SetFont("s9 cDefault Norm", "Tahoma")
 ;hive tools
@@ -2511,7 +2556,8 @@ MainGui.Add("Button", "x340 y40 w150 h20 vHotkeyGUI Disabled", "Change Hotkeys")
 MainGui.Add("Button", "x340 y62 w150 h20 vDebugLogGUI Disabled", "Debug Log Options").OnEvent("Click", nm_DebugLogGUI)
 MainGui.Add("Button", "x340 y84 w150 h20 vAutoStartManagerGUI Disabled", "Auto-Start Manager").OnEvent("Click", nm_AutoStartManager)
 ;discord tools
-MainGui.Add("Button", "x340 y124 w150 h40 vNightAnnouncementGUI Disabled", "Night Detection`nAnnouncement").OnEvent("Click", nm_NightAnnouncementGUI)
+MainGui.Add("Button", "x340 y124 w150 h20 vNightAnnouncementGUI Disabled", "Night Detection").OnEvent("Click", nm_NightAnnouncementGUI)
+MainGui.Add("Button", "x340 y146 w150 h20 vFieldFollowingGUI Disabled", "Field Following").OnEvent("Click", aq_FieldFollowingGUI)
 ;reporting
 MainGui.Add("Button", "x340 y184 w150 h20 vReportBugButton Disabled", "Report Bugs").OnEvent("Click", nm_ReportBugButton)
 MainGui.Add("Button", "x340 y206 w150 h20 vMakeSuggestionButton Disabled", "Make Suggestions").OnEvent("Click", nm_MakeSuggestionButton)
@@ -2647,7 +2693,7 @@ MainGui.Add("Text", "x345 y170 w110 +BackgroundTrans", "Multiple Reset:")
 (GuiCtrl := MainGui.Add("Slider", "x415 y168 w78 h16 vMultiReset Thick16 Disabled ToolTipTop Range0-3 Page1 TickInterval1", MultiReset)).Section := "Settings", GuiCtrl.OnEvent("Change", nm_saveConfig)
 (GuiCtrl := MainGui.Add("CheckBox", "x345 y186 vGatherDoubleReset Disabled Checked" GatherDoubleReset, "Gather Double Reset")).Section := "Settings", GuiCtrl.OnEvent("Click", nm_saveConfig)
 (GuiCtrl := MainGui.Add("CheckBox", "x345 y201 vDisableToolUse Disabled Checked" DisableToolUse, "Disable Tool Use")).Section := "Settings", GuiCtrl.OnEvent("Click", nm_saveConfig)
-GuiCtrl := MainGui.Add("CheckBox", "x345 y216 vAnnounceGuidingStar Disabled Checked" AnnounceGuidingStar, "Announce Guiding Star").OnEvent("Click", nm_AnnounceGuidWarn)
+(GuiCtrl := MainGui.Add("CheckBox", "x345 y216 vAnnounceGuidingStar Disabled Checked" AnnounceGuidingStar, "Announce Guiding Star")).Section := "Settings", GuiCtrl.OnEvent("Click", nm_saveConfig)
 SetLoadingProgress(30)
 
 ;COLLECT/Kill TAB
@@ -2876,13 +2922,15 @@ MainGui.Add("Text", "xs ys+36 +BackgroundTrans", "3:")
 MainGui.Add("Text", "x+14 yp w50 vFieldBooster3 +Center +BackgroundTrans", FieldBooster3)
 MainGui.Add("Button", "xp-12 yp-1 w12 h16 vFB3Left Disabled", "<").OnEvent("Click", nm_FieldBooster)
 MainGui.Add("Button", "xp+61 yp w12 h16 vFB3Right Disabled", ">").OnEvent("Click", nm_FieldBooster)
-MainGui.Add("Text", "x120 y35 left +BackgroundTrans", "Separate By:")
-MainGui.Add("Text", "xp+3 y+1 w12 vFieldBoosterMins +Center", FieldBoosterMins)
-MainGui.Add("UpDown", "xp+14 yp-1 h16 -16 Range0-12 vFieldBoosterMinsUpDown Disabled", FieldBoosterMins//5).OnEvent("Change", nm_FieldBoosterMins)
-MainGui.Add("Text", "xp+20 yp+1 w100 left +BackgroundTrans", "Mins")
+MainGui.Add("CheckBox", "x109 y37 +center vPFieldBoosted Disabled Checked" PFieldBoosted, "Boosted Field`nBuffs").OnEvent("Click", aq_togglePFieldBoosted)
 MainGui.Add("CheckBox", "x109 y67 +center vBoostChaserCheck Disabled Checked" BoostChaserCheck, "Gather in`nBoosted Field").OnEvent("Click", nm_BoostChaserCheck)
 MainGui.Add("Button", "x200 y65 w90 h30 vBoostedFieldSelectButton Disabled", "Select Boosted Gather Fields").OnEvent("Click", nm_BoostedFieldSelectButton)
 MainGui.SetFont("w700")
+
+aq_togglePFieldBoosted(*) {
+	global PFieldBoosted
+	IniWrite (PFieldBoosted := MainGui["PFieldBoosted"].Value), "settings\nm_config.ini", "Extensions", "PFieldBoosted"
+}
 
 ;shrine
 MainGui.Add("GroupBox", "x300 y25 w190 h105", "Wind Shrine")
@@ -2925,7 +2973,7 @@ Loop 6
 	MainGui.Add("Text", "x108 y" (95 + 20 * A_Index) " w62 vHBTimeText" i " +Center Hidden").OnEvent("Click", nm_HotbarEditTime)
 	MainGui.Add("UpDown", "x170 y" (94 + 20 * A_Index) " w10 h16 -16 Range1-99999 vHotbarTime" i " Hidden Disabled", HotbarTime%i%).OnEvent("Change", nm_HotbarTimeUpDown)
 	MainGui.Add("Text", "x188 y" (94 + 20 * A_Index) " w62 vHBConditionText" i " +Center Hidden")
-	(GuiCtrl := MainGui.Add("UpDown", "x250 y" (94 + 20 * A_Index) " w10 h16 -16 Range1-100 vHotbarMax" i " Hidden Disabled", HotbarMax%i%)).Section := "Boost", GuiCtrl.OnEvent("Change", nm_hotbarMaxUpDown)
+	(GuiCtrl := MainGui.Add("UpDown", "x250 y" (94 + 20 * A_Index) " w10 h16 -16 Range1-100 vHotbarMax" i " Hidden Disabled", HotbarMax%i%)).Section := "Boost", GuiCtrl.OnEvent("Change", nm_saveConfig)
 	SetLoadingProgress(31+A_Index)
 }
 nm_HotbarWhile()
@@ -2935,7 +2983,7 @@ MainGui.SetFont("s8 cDefault Norm", "Tahoma")
 
 ;stickers
 MainGui.SetFont("w700")
-MainGui.Add("GroupBox", "x300 y130 w191 h105", "Stickers")
+MainGui.Add("GroupBox", "x300 y130 w190 h105", "Stickers")
 MainGui.SetFont("s8 cDefault Norm", "Tahoma")
 MainGui.Add("CheckBox", "x305 yp+16 vStickerStackCheck Disabled Checked" StickerStackCheck, "Sticker Stack").OnEvent("Click", nm_StickerStackCheck)
 MainGui.Add("Text", "xp+6 yp+13 +BackgroundTrans", "\__")
@@ -3660,6 +3708,7 @@ nm_TabBoostLock(){
 	MainGui["FB3Left"].Enabled := 0
 	MainGui["FB3Right"].Enabled := 0
 	MainGui["FieldBoosterMinsUpDown"].Enabled := 0
+	MainGui["PFieldBoosted"].Enabled := 0
 	MainGui["BoostChaserCheck"].Enabled := 0
 	MainGui["AutoFieldBoostButton"].Enabled := 0
 	MainGui["BoostedFieldSelectButton"].Enabled := 0
@@ -3711,6 +3760,7 @@ nm_TabBoostUnLock(){
 	MainGui["FB1Right"].Enabled := 1
 	nm_FieldBooster()
 	MainGui["FieldBoosterMinsUpDown"].Enabled := 1
+	MainGui["PFieldBoosted"].Enabled := 1
 	MainGui["BoostChaserCheck"].Enabled := 1
 	MainGui["AutoFieldBoostButton"].Enabled := 1
 	MainGui["BoostedFieldSelectButton"].Enabled := 1
@@ -4027,6 +4077,7 @@ nm_TabMiscLock(){
 	MainGui["DebugLogGUI"].Enabled := 0
 	MainGui["AutoStartManagerGUI"].Enabled := 0
 	MainGui["NightAnnouncementGUI"].Enabled := 0
+	MainGui["FieldFollowingGUI"].Enabled := 0
 	MainGui["ReportBugButton"].Enabled := 0
 	MainGui["MakeSuggestionButton"].Enabled := 0
 	MainGui["AutoMutatorButton"].Enabled := 0
@@ -4043,6 +4094,7 @@ nm_TabMiscUnLock(){
 	MainGui["DebugLogGUI"].Enabled := 1
 	MainGui["AutoStartManagerGUI"].Enabled := 1
 	MainGui["NightAnnouncementGUI"].Enabled := 1
+	MainGui["FieldFollowingGUI"].Enabled := 1
 	MainGui["ReportBugButton"].Enabled := 1
 	MainGui["MakeSuggestionButton"].Enabled := 1
 	MainGui["AutoMutatorButton"].Enabled := 1
@@ -5280,12 +5332,6 @@ nm_HotbarEditTime(GuiCtrl, *){
 	}
 	else if (time != "")
 		MsgBox "You must enter a valid number of seconds between 1 and 99999!", "Hotbar Slot Time", 0x40030 " T20"
-}
-nm_hotbarMaxUpDown(GuiCtrl, *){
-	global
-	local i := SubStr(GuiCtrl.Name, -1)
-	MainGui["HBConditionText" i].Text := "Until: " GuiCtrl.Value "%"
-	IniWrite (HotbarMax%i% := GuiCtrl.Value), "settings\nm_config.ini", "Boost", "HotbarMax" i
 }
 nm_ShrineIndexOption(*) {
 	global ShrineIndexOption, ShrineIndex
@@ -6845,7 +6891,7 @@ nm_WebhookGUI(*){
 	{
 		global
 		local k,v,x,y,w,h,str
-		static ss_list := ["critical","amulet","machine","balloon","vicious","death","planter","honey", "honeyUpdate"]
+		static ss_list := ["critical","amulet","machine","balloon","vicious","death","planter","honey"]
 		static ping_list := ["criticalerror","disconnect","gamefrozen","phantom","unexpecteddeath","emergencyballoon"]
 
 		Gdip_GraphicsClear(G)
@@ -8467,6 +8513,100 @@ nm_NightAnnouncementHelp(*){
 	This is the channel where messages will be sent and people with access to the channel will be informed that it is nighttime in your server.
 	)", "Announce Night Detection", 0x40000
 }
+aq_FieldFollowingGUI(*){
+	global
+	global FieldFollowingFollowMode
+	GuiClose(*){
+		if (IsSet(FieldFollowingGUI) && IsObject(FieldFollowingGUI))
+			FieldFollowingGUI.Destroy(), FieldFollowingGUI := ""
+	}
+	GuiClose()
+	FieldFollowingGUI := Gui("+AlwaysOnTop +Border", "Field Following")
+	FieldFollowingGUI.OnEvent("Close", GuiClose)
+	FieldFollowingGUI.SetFont("s8 cDefault Bold", "Tahoma")
+	FieldFollowingGUI.Add("GroupBox", "x5 y2 w290 h65", "Settings")
+	FieldFollowingGUI.Add("CheckBox", "x73 y2 vFieldFollowingCheck Checked" FieldFollowingCheck, "Enabled").OnEvent("Click", aq_FieldFollowingCheck)
+	FieldFollowingGUI.SetFont("Norm")
+	FieldFollowingGUI.Add("Button", "x150 y1 w135 h16", "What does this do?").OnEvent("Click", aq_FieldFollowingHelp)
+	FieldFollowingGUI.Add("Text", "x15 y23", "Follow Mode:")
+	(GuiCtrl := FieldFollowingGUI.Add("DropDownList", "x80 y19 w65 vFieldFollowingFollowMode Disabled" (FieldFollowingCheck = 0), ["Leader", "Follower"])).Text := FieldFollowingFollowMode, GuiCtrl.OnEvent("Change", aq_FieldFollowingFollowModeSelect)
+	FieldFollowingGUI.Add("Text", "x150 y23", "Max Time:")
+	FieldFollowingGUI.Add("Edit", "x200 y21 w80 h18 vFieldFollowingMaxTime Disabled" (FieldFollowingCheck = 0), FieldFollowingMaxTime).OnEvent("Change", aq_saveFieldFollowingMaxTime)
+	FieldFollowingGUI.Add("Text", "x15 y45", "Channel ID:")
+	FieldFollowingGUI.Add("Edit", "x80 y43 w200 h18 vFieldFollowingChannelID Disabled" (FieldFollowingCheck = 0), FieldFollowingChannelID).OnEvent("Change", aq_saveFieldFollowingChannelID)
+	FieldFollowingGUI.Show("w290 h62")
+}
+aq_FieldFollowingCheck(*){
+	global FieldFollowingCheck, FieldFollowingGUI
+	FieldFollowingCheck := FieldFollowingGUI["FieldFollowingCheck"].Value
+	IniWrite FieldFollowingCheck, "settings\nm_config.ini", "Extensions", "FieldFollowingCheck"
+	PostSubmacroMessage("Status", 0x5552, 361, FieldFollowingCheck)
+	FieldFollowingGUI["FieldFollowingFollowMode"].Enabled := FieldFollowingGUI["FieldFollowingMaxTime"].Enabled := FieldFollowingGUI["FieldFollowingChannelID"].Enabled := FieldFollowingCheck
+}
+aq_FieldFollowingHelp(*){
+	MsgBox "
+	(
+	DESCRIPTION:
+	When this option is enabled, the macro will automatically follow a leader account to whatever field they are gathering in if it is a follower account, or announce field changes to follower accounts if it is a leader account.
+	NOTE:
+	You must have a Discord bot setup in order for this feature to work properly. It is recommended to not use the same channel ID as the bot for this.
+
+	Follow Mode:
+	This option allows you to choose between being the a follower account that follows the leader account, or the leader account that follower accounts follow.
+
+	Max Time:
+	This is the maximum amount of time that the macro will follow the leader account before it returns to it's original gather field (in seconds). This is not relevant if the follow mode is leader.
+
+	Channel ID:
+	IF this account is a follower account: This is the channel ID that the account will listen to field changes in, make sure this is the same as the announcement channel of the leader account.
+	IF this account is a leader account: This is the channel ID that the account will announce field changes in, make sure this is the same as the listen channel of the follower account.
+
+	)", "Field Following", 0x40000
+}
+aq_FieldFollowingFollowModeSelect(GuiCtrl?, *){
+	global FieldFollowingFollowMode
+	if IsSet(GuiCtrl) {
+		FieldFollowingFollowMode := FieldFollowingGUI["FieldFollowingFollowMode"].Text
+		IniWrite FieldFollowingFollowMode, "settings\nm_config.ini", "Extensions", "FieldFollowingFollowMode"
+		PostSubmacroMessage("Status", 0x5553, 80, 10)
+	}
+}
+aq_saveFieldFollowingMaxTime(GuiCtrl, *){
+	global FieldFollowingMaxTime
+	p := EditGetCurrentCol(GuiCtrl)
+	NewFieldFollowingMaxTime := GuiCtrl.Value
+
+	if (NewFieldFollowingMaxTime ~= "^\d*$")
+	{
+		FieldFollowingMaxTime := NewFieldFollowingMaxTime
+		IniWrite FieldFollowingMaxTime, "settings\nm_config.ini", "Extensions", "FieldFollowingMaxTime"
+		PostSubmacroMessage("Status", 0x5553, 81, 10)
+	}
+	else
+	{
+		GuiCtrl.Value := FieldFollowingMaxTime
+		SendMessage 0xB1, p-2, p-2, GuiCtrl
+		nm_ShowErrorBalloonTip(GuiCtrl, "Invalid max follow time!", "Make sure it is a valid number (in seconds).")
+	}
+}
+aq_saveFieldFollowingChannelID(GuiCtrl, *){
+	global FieldFollowingChannelID
+	p := EditGetCurrentCol(GuiCtrl)
+	NewFieldFollowingChannelID := GuiCtrl.Value
+
+	if (NewFieldFollowingChannelID ~= "^\d*$")
+	{
+		FieldFollowingChannelID := NewFieldFollowingChannelID
+		IniWrite FieldFollowingChannelID, "settings\nm_config.ini", "Extensions", "FieldFollowingChannelID"
+		PostSubmacroMessage("Status", 0x5553, 82, 10)
+	}
+	else
+	{
+		GuiCtrl.Value := FieldFollowingChannelID
+		SendMessage 0xB1, p-2, p-2, GuiCtrl
+		nm_ShowErrorBalloonTip(GuiCtrl, "Invalid Discord Channel ID!", "Make sure it is a valid Channel ID.")
+	}
+}
 nm_ReportBugButton(*){
 	Run "https://github.com/NatroTeam/NatroMacro/issues/new?assignees=&labels=bug%2Cneeds+triage&projects=&template=bug.yml"
 }
@@ -9182,6 +9322,7 @@ nm_ContributorsImage(page:=1, contributors:=""){
 			, ["heatsky",0xff3f8d4d,"725444258835726407"]
 			, ["valibreaz",0xff7aa22c,"244504077579452417"]
 			, ["randomuserhere",0xff2bc016,"744072472890179665"]
+			, ["crazyrocketman_",0xffffdc64,"720088699475591180"]
 			, ["chaxe",0xff794044,"529089693749608468"]
 			, ["_phucduc_",0xffffde48,"710486399744475136"]
 			, ["anniespony",0xff0096ff,"217700684835979265"]
@@ -10544,7 +10685,7 @@ nm_FindItem(chosenItem, *) {
 	DetectHiddenWindows 1
 	if windowWidth == 0 {
 		if WinExist("Status.ahk ahk_class AutoHotkey")
-			sendMessage 0x5559
+			sendMessage 0x5560
 		DetectHiddenWindows 0
 		return 0
 	}
@@ -10554,7 +10695,7 @@ nm_FindItem(chosenItem, *) {
 	ActivateRoblox()
 	if (nm_OpenMenu("itemmenu") = 0) {
 		if WinExist("Status.ahk ahk_class AutoHotkey")
-			SendMessage 0x5559,, 2
+			SendMessage 0x5560,, 2
 		DetectHiddenWindows 0
 		nm_setShiftLock(Prev_ShiftLock)
 		return 0
@@ -12556,121 +12697,98 @@ nm_ShrineRotation() {
 		}
 	}
 }
-nm_toAnyBooster(){	
-	global LastBooster
+nm_toAnyBooster(){
+	global LastBlueBoost, QuestBlueBoost, LastRedBoost, QuestRedBoost, LastMountainBoost, LastCoconutDis, CoconutBoosterCheck, CoconutDisCheck, BoostChaserCheck
+		, FieldBooster1, FieldBooster2, FieldBooster3, FieldBoosterMins
+	static blueBoosterFields:=["Pine Tree", "Bamboo", "Blue Flower", "Stump"], redBoosterFields:=["Rose", "Strawberry", "Mushroom", "Pepper"], mountainBoosterfields:=["Cactus", "Pumpkin", "Pineapple", "Spider", "Clover", "Dandelion", "Sunflower"], coconutBoosterfields:=["Coconut"]
 
-	; prioritise coconut every 4 hours if enabled
-	if((BoostChaserCheck && CoconutBoosterCheck && CoconutDisCheck) && (BoosterCooldown("coconut") && LastBoosterCheck()))
-		nm_updateAction("Booster"), nm_toBooster("coconut")
+	;Coconut field booster; prioritise every 4 hours if enabled
+	LastBooster:=max(LastBlueBoost, LastRedBoost, LastMountainBoost, (BoostChaserCheck && CoconutBoosterCheck && CoconutDisCheck) ? LastCoconutDis : 1)
+	if(BoostChaserCheck && CoconutBoosterCheck && CoconutDisCheck && (nowUnix()-LastCoconutDis)>14400 && (nowUnix()-LastBooster)>(FieldBoosterMins*60)) {
+		nm_updateAction("Booster")
+		nm_toBooster("coconut")
+	}
 
-	; other
-	eligible := [], available := 0
-	while(A_Index < 4 && (FieldBooster%A_Index%!="none" || QuestBlueBoost || QuestRedBoost))
-	{
-		i := A_Index
-		for name in ["Red", "Blue", "Mountain"]
-		{
-			if (FieldBooster%i% = name) || ((name = "Red" || name = "Blue") && Quest%name%Boost)
-			{
-				loop 2
-					if eligible.Length >= A_Index && eligible[A_Index][1] = name
-						continue 2
-
-				if BoosterCooldown(name) && LastBoosterCheck() 
-					eligible.Push([name, "available"]), available++ 
-				else
-					eligible.Push([name, "unavailable"])
-			}
+	;Other field boosters
+	loop 3 {
+		if(FieldBooster%A_Index%="none" && QuestBlueBoost=0 && QuestRedBoost=0)
+			break
+		LastBooster:=max(LastBlueBoost, LastRedBoost, LastMountainBoost, (BoostChaserCheck && CoconutBoosterCheck && CoconutDisCheck) ? LastCoconutDis : 1)
+		;Blue Field Booster
+		if((FieldBooster%A_Index%="blue" && (nowUnix()-LastBlueBoost)>2700 && (nowUnix()-LastBooster)>(FieldBoosterMins*60)) || (QuestBlueBoost && (nowUnix()-LastBlueBoost)>2700)){
+			nm_updateAction("Booster")
+			nm_toBooster("blue")
+		}
+		;Red Field Booster
+		else if((FieldBooster%A_Index%="red" && (nowUnix()-LastRedBoost)>2700 && (nowUnix()-LastBooster)>(FieldBoosterMins*60)) || (QuestRedBoost && (nowUnix()-LastRedBoost)>2700)){
+			nm_updateAction("Booster")
+			nm_toBooster("red")
+		}
+		;Mountain Top Field Booster
+		else if(FieldBooster%A_Index%="mountain"  && (nowUnix()-LastMountainBoost)>2700 && (nowUnix()-LastBooster)>(FieldBoosterMins*60)){ ;1 hour
+			nm_updateAction("Booster")
+			nm_toBooster("mountain")
 		}
 	}
-	; ensure rotation through all available boosters, even if earlier one comes off cool-down
-	if available > 0
-	{
-		loop 1 
-		{
-			if IsSet(LastBooster) 
-			{
-				loop eligible.Length
-				{
-					i := A_Index
-					if eligible[i][1] = LastBooster 
-					{
-						loop eligible.Length
-						{
-							i := (i < eligible.Length) ? i+1 : 1
-							if eligible[i][2] = "available"
-							{
-								next := eligible[i][1] 
-								break 3
-							}
-						}
-						break 
-					}
-				}
-			}
-			; otherwise default to first available, for session start and as failsafe
-			loop eligible.Length 
-				if eligible[A_Index][2] = "available" 
-				{
-					next := eligible[A_Index][1]
-					break 2
-				}
-		}
-		LastBooster := next	
-		nm_updateAction("Booster"), nm_toBooster(next)
-	}
-	LastBoosterCheck() => ((nowUnix()-max(LastBlueBoost, LastRedBoost, LastMountainBoost, (BoostChaserCheck && CoconutBoosterCheck && CoconutDisCheck) ? LastCoconutDis : 1))>(FieldBoosterMins*60))
-	BoosterCooldown(booster) => (booster = "coconut" ? ((nowUnix()-LastCoconutDis)>14400) : (nowUnix()-Last%booster%Boost)>2700)
 }
 nm_toBooster(location){
-	global LastBlueBoost, LastRedBoost, LastMountainBoost, LastCoconutDis, RecentFBoost
+	global FwdKey, LeftKey, BackKey, RightKey, RotLeft, RotRight, KeyDelay, MoveSpeedNum, MoveMethod, SC_E
+	global LastBlueBoost, LastRedBoost, LastMountainBoost, LastCoconutDis, RecentFBoost, objective, BoostChaserCheck, FieldFollowingCheck
+	global BambooBoosterCheck, BlueFlowerBoosterCheck, PineTreeBoosterCheck, RoseBoosterCheck, StrawberryBoosterCheck, MushroomBoosterCheck, PepperBoosterCheck, StumpBoosterCheck
+	global CactusBoosterCheck, PumpkinBoosterCheck, PineappleBoosterCheck, SpiderBoosterCheck, CloverBoosterCheck, DandelionBoosterCheck, SunflowerBoosterCheck, CoconutBoosterCheck
 	static blueBoosterFields:=["Pine Tree", "Bamboo", "Blue Flower", "Stump"], redBoosterFields:=["Rose", "Strawberry", "Mushroom", "Pepper"], mountainBoosterfields:=["Cactus", "Pumpkin", "Pineapple", "Spider", "Clover", "Dandelion", "Sunflower"], coconutBoosterfields:=["Coconut"]
-	
+
+	success:=0
 	Loop 2 {
 		nm_Reset(0)
-		nm_setStatus("Traveling", ((location="Mountain") ? "Mountain Top Booster" : StrTitle(location) " Field Booster") . ((A_Index=2) ? " (Attempt 2)" : ""))
+		nm_setStatus("Traveling", (location="coconut") ? "Coconut Field Booster" : (location="red") ? "Red Field Booster" : (location="blue") ? "Blue Field Booster" : "Mountain Top Field Booster")
 		(location="coconut") ? (nm_gotoCollect("coconutdis")) : (nm_gotoBooster(location))
-		if (nm_imgSearch("e_button.png",30,"high")[1] = 0) {
+		searchRet := nm_imgSearch("e_button.png",30,"high")
+		if (searchRet[1] = 0) {
 			sendinput "{" SC_E " down}"
 			Sleep 100
 			sendinput "{" SC_E " up}"
 			Sleep 1000
-			If (location = "coconut")
-				LastCoconutDis:=nowUnix(), IniWrite(LastCoconutDis, "settings\nm_config.ini", "Collect", "LastCoconutDis")
-			else
-				Last%location%Boost:=nowUnix(), IniWrite(Last%location%Boost, "settings\nm_config.ini", "Collect", "Last" location "Boost")
-			
-			nm_createWalk((location = "mountain") ? nm_Walk(8, LeftKey) : (location = "red") ? nm_Walk(8, BackKey) : nm_Walk(8, RightKey))
-			KeyWait "F14", "D T5 L"
-			KeyWait "F14", "T10 L"
-			nm_endWalk()
-			if location = "red"
-				nm_Move(2000*round(18/MoveSpeedNum, 3), FwdKey, RightKey) ; red needs additional steps to avoid the leaderboard area
-			Loop 10 {
-				for k,v in %location%BoosterFields {
-					if nm_fieldBoostCheck(v, 1)
-					{
-						nm_setStatus("Boosted", v), RecentFBoost := v
-						break 2
-					}
-
-				}
-				
-				sleep 200
-				If A_Index = 10 
-					nm_setStatus("Failed", "Could not find field boost!")
-			} 
+			success:=1
 			break
 		}
-		else if (A_Index = 2)
+	}
+
+	if (success = 1)
+	{
+		If (location = "coconut") {
+			LastCoconutDis:=nowUnix()
+			IniWrite LastCoconutDis, "settings\nm_config.ini", "Collect", "LastCoconutDis"
+		} else {
+			Last%location%Boost:=nowUnix()
+			IniWrite Last%location%Boost, "settings\nm_config.ini", "Collect", "Last" location "Boost"
+		}
+		nm_Move(2000*round(18/MoveSpeedNum, 2), (location = "blue") ? RightKey : BackKey)
+
+		Loop 10
 		{
-			If (location = "coconut") {
-				LastCoconutDis:=nowUnix()-7200
-				IniWrite LastCoconutDis, "settings\nm_config.ini", "Collect", "LastCoconutDis"
-			} else {
-				Last%location%Boost:=nowUnix()-1500
-				IniWrite Last%location%Boost, "settings\nm_config.ini", "Collect", "Last" location "Boost"
+			for k,v in %location%BoosterFields
+			{
+				if nm_fieldBoostCheck(v, 0) ;switched to variant 0 to differentiate between winds and boost
+				{
+					nm_setStatus("Boosted", v), RecentFBoost := v
+					arg := StrReplace(v, " ")
+					if (FieldFollowingCheck && BoostChaserCheck && %arg%BoosterCheck)
+						aq_announceField(v)
+					break 2
+				}
 			}
+			Sleep 200
+		}
+	}
+	else
+	{
+		If (location = "coconut") {
+			LastCoconutDis:=nowUnix()-7200
+			IniWrite LastCoconutDis, "settings\nm_config.ini", "Collect", "LastCoconutDis"
+		} else {
+			Last%location%Boost:=nowUnix()-3000
+			IniWrite Last%location%Boost, "settings\nm_config.ini", "Collect", "Last" location "Boost"
 		}
 	}
 }
@@ -15306,9 +15424,27 @@ nm_Mondo(){
 		IniWrite LastMondoBuff, "settings\nm_config.ini", "Collect", "LastMondoBuff"
 	}
 }
+aq_followToField(wParam, *){
+	global FollowingLeader, FollowingField, FollowingStartTime, index_field_map
+
+	if (index_field_map[wParam] = FieldName1) {
+		FollowingLeader := 0
+		return
+	}
+
+	FollowingLeader := 1
+	FollowingStartTime := nowUnix()
+	FollowingField := index_field_map[wParam]
+}
+aq_announceField(field){
+	global field_index_map, LastAnnouncedField
+	fieldarg := StrReplace(field, " ")
+	PostSubmacroMessage("Status", 0x5561, field_index_map[fieldarg])
+	LastAnnouncedField := field
+}
 nm_GoGather(){
 	global youDied, VBState
-		, TCFBKey, AFCFBKey, TCLRKey, AFCLRKey, FwdKey, LeftKey, BackKey, RightKey, RotLeft, RotRight, SC_E, KeyDelay
+		, TCFBKey, AFCFBKey, TCLRKey, AFCLRKey, FwdKey, LeftKey, BackKey, RightKey, RotLeft, RotRight, SC_E, KeyDelay, RecentFBoost
 		, MoveMethod
 		, CurrentFieldNum
 		, objective
@@ -15329,6 +15465,7 @@ nm_GoGather(){
 		, GameFrozenCounter
 		, BlackQuestCheck, BrownQuestCheck, BuckoQuestCheck, RileyQuestCheck, PolarQuestCheck
 		, BlackQuestComplete, BrownQuestComplete, BuckoQuestComplete, RileyQuestComplete, PolarQuestComplete
+		, FollowingField, FollowingLeader, FollowingStartTime, FieldFollowingFollowMode, LastAnnouncedField, FieldFollowingCheck
 
 	;VICIOUS BEE
 	if (VBState = 1)
@@ -15366,7 +15503,8 @@ nm_GoGather(){
 			loop 1 {
 				for i, location in ["blue", "mountain", "red", "coconut"] {
 					for k, v in %location%BoosterFields {
-						if((nm_fieldBoostCheck(v, 1)) && (%k%)) {
+						last_booster := (location="coconut") ? LastCoconutDis: Last%location%Boost
+						if((%k%) && (RecentFBoost=v && nowUnix()-last_booster<900)) {
 							BoostChaserField:=v
 							break
 						}
@@ -15375,12 +15513,12 @@ nm_GoGather(){
 				if(BoostChaserField!="none")
 					break
 				;other
-				for key, value in otherFields {
-					if(nm_fieldBoostCheck(value, 1)) {
-						BoostChaserField:=value
-						break
-					}
-				}
+				;for key, value in otherFields {
+				;	if(nm_fieldBoostCheck(value, 1)) {
+				;		BoostChaserField:=value
+				;		break
+				;	}
+				;}
 			}
 			;set field override
 			if(BoostChaserField!="none") {
@@ -15532,6 +15670,27 @@ nm_GoGather(){
 				}
 			}
 		}
+		;following override
+		if(FollowingLeader=1){
+			fieldOverrideReason:="Following"
+			FieldName:=FollowingField
+			FieldPattern:=FieldDefault[FollowingField]["pattern"]
+			FieldPatternSize:=FieldDefault[FollowingField]["size"]
+			FieldPatternReps:=FieldDefault[FollowingField]["width"]
+			FieldPatternShift:=FieldDefault[FollowingField]["shiftlock"]
+			FieldPatternInvertFB:=FieldDefault[FollowingField]["invertFB"]
+			FieldPatternInvertLR:=FieldDefault[FollowingField]["invertLR"]
+			FieldUntilMins:=FieldDefault[FollowingField]["gathertime"]
+			FieldUntilPack:=FieldDefault[FollowingField]["percent"]
+			FieldReturnType:=FieldDefault[FollowingField]["convert"]
+			FieldSprinklerLoc:=FieldDefault[FollowingField]["sprinkler"]
+			FieldSprinklerDist:=FieldDefault[FollowingField]["distance"]
+			FieldRotateDirection:=FieldDefault[FollowingField]["camera"]
+			FieldRotateTimes:=FieldDefault[FollowingField]["turns"]
+			FieldDriftCheck:=FieldDefault[FollowingField]["drift"]
+			break
+		}
+
 		FieldName:=FieldName%CurrentFieldNum%
 		FieldPattern:=FieldPattern%CurrentFieldNum%
 		FieldPatternSize:=FieldPatternSize%CurrentFieldNum%
@@ -15548,6 +15707,11 @@ nm_GoGather(){
 		FieldRotateTimes:=FieldRotateTimes%CurrentFieldNum%
 		FieldDriftCheck:=FieldDriftCheck%CurrentFieldNum%
 	}
+
+	;gather field changed?
+	if (FieldFollowingCheck && FieldFollowingFollowMode="Leader" && LastAnnouncedField!=FieldName)
+		aq_announceField(FieldName)
+
 	nm_updateAction("Gather")
 	;close all menus
 	nm_OpenMenu()
@@ -15666,6 +15830,17 @@ nm_GoGather(){
 		TCLRKey:=LeftKey
 		AFCLRKey:=RightKey
 	}
+
+	if (FieldName="Pine Tree" || FieldName="Bamboo" || FieldName="Blue Flower" || FieldName="Stump") {
+    	field_type := "Blue"
+	}
+		else if (FieldName="Rose" || FieldName="Strawberry" || FieldName="Mushroom" || FieldName="Pepper") {
+    	field_type := "Red"
+	}
+	else if (FieldName="Sunflower" || FieldName="Dandelion" || FieldName="Clover" || FieldName="Spider" || FieldName="Cactus" || FieldName="Pumpkin" || FieldName="Pineapple") {
+    	field_type := "Mountain"
+	}
+
 	;set FDC switch
 	FDCEnabled := (FieldDriftCheck && (FieldPattern != "Stationary"))
 
@@ -15681,19 +15856,20 @@ nm_GoGather(){
 	if(FieldPatternShift) {
 		nm_setShiftLock(1)
 	}
-	while(((nowUnix()-gatherStart)<(FieldUntilMins*60)) || (PFieldBoosted && (nowUnix()-GatherFieldBoostedStart)<840) || (PFieldBoostExtend && (nowUnix()-GatherFieldBoostedStart)<1800 && (nowUnix()-LastGlitter)<900) || (PFieldGuidExtend && FieldGuidDetected && (nowUnix()-gatherStart)<(FieldUntilMins*60+PFieldGuidExtend*60) && (nowUnix()-GatherFieldBoostedStart)>900 && (nowUnix()-LastGlitter)>900) || (PPopStarExtend && HasPopStar && PopStarActive)){
+	while(((nowUnix()-gatherStart)<(FieldUntilMins*60)) || (PFieldBoostExtend && (nowUnix()-GatherFieldBoostedStart)<1800 && (nowUnix()-LastGlitter)<900) || (PFieldGuidExtend && FieldGuidDetected && (nowUnix()-gatherStart)<(FieldUntilMins*60+PFieldGuidExtend*60) && (nowUnix()-GatherFieldBoostedStart)>900 && (nowUnix()-LastGlitter)>900) || (PPopStarExtend && HasPopStar && PopStarActive)){
 		if !fieldPatternShift
 			MouseMove windowX+350, windowY+GetYOffset()+100
 		if(!DisableToolUse)
 			Click "Down"
 		nm_gather(FieldPattern, A_Index, FieldPatternSize, FieldPatternReps, FacingFieldCorner)
 
-		while ((GetKeyState("F14") && (A_Index <= 3600)) || (A_Index = 1)) { ; timeout 3m
+		while ((GetKeyState("F14") && (A_Index <= 2700)) || (A_Index = 1)) { ; timeout 3m
 			;use glitter
 			if (Mod(A_Index, 20) = 1) { ; every 1s
-				if(PFieldBoosted && (nowUnix()-GatherFieldBoostedStart)>525 && (nowUnix()-GatherFieldBoostedStart)<900 && (nowUnix()-LastGlitter)>900 && GlitterKey!="none" && fieldOverrideReason="None") { ;between 9 and 15 mins (-minus an extra 15 seconds)
+				if(PFieldBoosted && field_type!="None" && (nowUnix()-Last%field_type%Boost)>720 && (nowUnix()-Last%field_type%Boost)<900 && GatherFieldBoosted && (nowUnix()-LastGlitter)>900 && GlitterKey!="none" && (fieldOverrideReason="None" || fieldOverrideReason="Boost")) { ;between 12 and 15 mins
 					Send "{" GlitterKey "}"
 					LastGlitter:=nowUnix()
+					Last%field_type%Boost:=nowUnix()
 					IniWrite LastGlitter, "settings\nm_config.ini", "Boost", "LastGlitter"
 				}
 				nm_autoFieldBoost(FieldName)
@@ -15725,9 +15901,10 @@ nm_GoGather(){
 					} else if ((nowUnix()-LastMicroConverter)>10) {
 						interruptReason := "Backpack exceeds " .  FieldUntilPack . " percent"
 						;use glitter early if boosted and close to glitter time
-						if(PFieldBoosted && (nowUnix()-GatherFieldBoostedStart)>600 && (nowUnix()-GatherFieldBoostedStart)<900 && (nowUnix()-LastGlitter)>900 && GlitterKey!="none" && (fieldOverrideReason="None" || fieldOverrideReason="Boost")){ ;between 10 and 15 mins
+						if(PFieldBoosted && field_type!="None" && (nowUnix()-Last%field_type%Boost)>720 && (nowUnix()-Last%field_type%Boost)<900 && GatherFieldBoosted && (nowUnix()-LastGlitter)>900 && GlitterKey!="none" && (fieldOverrideReason="None" || fieldOverrideReason="Boost")){ ;between 11 and 15 mins
 							Send "{" GlitterKey "}"
 							LastGlitter:=nowUnix()
+							Last%field_type%Boost:=nowUnix()
 							IniWrite LastGlitter, "settings\nm_config.ini", "Boost", "LastGlitter"
 						}
 						break
@@ -15744,9 +15921,26 @@ nm_GoGather(){
 				}
 				;boost is over
 				if (fieldOverrideReason="Boost" && (nowUnix()-GatherFieldBoostedStart>900) && (nowUnix()-LastGlitter>900)) {
+					; gather field changed
+					if (FieldFollowingCheck && FieldFollowingFollowMode="Leader")
+						aq_announceField(FieldName)
 					interruptReason := "Boost Over"
 					break
 				}
+
+				;following leader
+				if (FollowingLeader=1 && FieldName!=FollowingField) {
+					interruptReason := "Following Leader"
+					break
+				}
+
+				;returning from followed field
+				if ((FollowingLeader=1 && nowUnix() - FollowingStartTime > FieldFollowingMaxTime && FieldName!=FieldName%CurrentFieldNum%) || (fieldOverrideReason="Following" && FollowingLeader=0)) {
+					FollowingLeader := 0
+					interruptReason := "Returning from followed field"
+					break
+				}
+
 				;mondo
 				if nm_MondoInterrupt(){
 					interruptReason := "Mondo"
@@ -16193,9 +16387,9 @@ nm_createWalk(movement, name:="", vars:="") ; this function generates the 'walk'
 	
 	movespeed := ' MoveSpeedNum '
 	both            := (Mod(movespeed*1000, 1265) = 0) || (Mod(Round((movespeed+0.005)*1000), 1265) = 0)
-	hasty_guard     := (both || Mod(movespeed*1000, 1100) < 0.00001)
-	gifted_hasty    := (both || Mod(movespeed*1000, 1150) < 0.00001)
-	base_movespeed  := round(movespeed / (both ? 1.265 : (hasty_guard ? 1.1 : (gifted_hasty ? 1.15 : 1))), 0)
+    hasty_guard     := (both || Mod(movespeed*1000, 1100) < 0.00001)
+    gifted_hasty    := (both || Mod(movespeed*1000, 1150) < 0.00001)
+    base_movespeed  := round(movespeed / (both ? 1.265 : (hasty_guard ? 1.1 : (gifted_hasty ? 1.15 : 1))), 0)
 	'
 	) :
 	(
@@ -16329,7 +16523,7 @@ nm_convert(){
 		, ConvertStartTime, TotalConvertTime, SessionConvertTime
 		, BackpackPercent, BackpackPercentFiltered
 		, PFieldBoosted, GatherFieldBoosted, GatherFieldBoostedStart, LastGlitter, GlitterKey
-		, GameFrozenCounter, LastConvertBalloon, ConvertBalloon, ConvertMins, HiveBees, ConvertDelay, ConvertGatherFlag
+		, GameFrozenCounter, LastConvertBalloon, ConvertBalloon, ConvertMins, HiveBees, ConvertDelay, ConvertGatherFlag, LastBlueBoost, LastRedBoost, LastMountainBoost
 
 	if ((VBState = 1) || nm_MondoInterrupt())
 		return
@@ -16364,7 +16558,7 @@ nm_convert(){
 			if (disconnectcheck()) {
 				return
 			}
-			if (PFieldBoosted && (nowUnix()-GatherFieldBoostedStart)>780 && (nowUnix()-GatherFieldBoostedStart)<900 && (nowUnix()-LastGlitter)>900 && GlitterKey!="none") {
+			if (PFieldBoosted && (nowUnix()-LastBlueBoost)>780 && (nowUnix()-LastBlueBoost)<900 && (nowUnix()-LastGlitter)>900 && GlitterKey!="none") {
 				nm_setStatus("Interupted", "Field Boosted")
 				return
 			}
@@ -16436,7 +16630,7 @@ nm_convert(){
 				if (disconnectcheck()) {
 					return
 				}
-				if ((PFieldBoosted = 1) && (nowUnix()-GatherFieldBoostedStart)>780 && (nowUnix()-GatherFieldBoostedStart)<900 && (nowUnix()-LastGlitter)>900 && GlitterKey!="none") {
+				if (PFieldBoosted && (nowUnix()-LastBlueBoost)>780 && (nowUnix()-LastBlueBoost)<900 && (nowUnix()-LastGlitter)>900 && GlitterKey!="none") {
 					nm_setStatus("Interupted", "Field Boosted")
 					return
 				}
@@ -16837,7 +17031,7 @@ DisconnectCheck(testCheck := 0)
 		, PlanterName1, PlanterName2, PlanterName3, PlanterHarvestTime1, PlanterHarvestTime2, PlanterHarvestTime3
 		, MacroState, ReconnectDelay
 		, FallbackServer1, FallbackServer2, FallbackServer3, beesmasActive
-	static ServerLabels := Map(0,"Public Server", 1,"Private Server", 2,"Fallback Server 1", 3,"Fallback Server 2", 4,"Fallback Server 3")
+	static ServerLabels := Map(0,"Public Server", 1,"Private Server", 2,"Fallback Server 1", 3,"Fallback Server 2", 4,"Fallback Server 3", 5, "Vic Hop Server")
 
 	; return if not disconnected or crashed
 	ActivateRoblox()
@@ -17460,7 +17654,33 @@ nm_searchForE(){
 	}
 	return success
 }
-nm_boostBypassCheck() => 0 ; always returns 0 for now: no field boost bypass implemented
+nm_boostBypassCheck(){
+	global PFieldBoostBypass, RecentFBoost, LastBlueBoost, LastRedBoost, LastMountainBoost
+	static fieldBoosters := Map("Pine Tree", "blue"
+		, "Bamboo", "blue"
+		, "Blue Flower", "blue"
+		, "Rose", "red"
+		, "Strawberry", "red"
+		, "Mushroom", "red"
+		, "Cactus", "mountain"
+		, "Pumpkin", "mountain"
+		, "Pineapple", "mountain"
+		, "Spider", "mountain"
+		, "Clover", "mountain"
+		, "Dandelion", "mountain"
+		, "Sunflower", "mountain")
+
+	if (!PFieldBoostBypass || !fieldBoosters.Has(RecentFBoost))
+		return 0
+
+	booster := fieldBoosters[RecentFBoost]
+	for k,v in StrSplit(PFieldBoostBypass, ",")
+	{
+		if ((RecentFBoost = Trim(v)) && ((nowUnix() - Last%booster%Boost) < 900))
+			return 1
+	}
+	return 0
+}
 nm_ViciousCheck(){
 	global VBState ;0=no VB, 1=searching for VB, 2=VB found
 	global VBLastKilled, TotalViciousKills, SessionViciousKills, KeyDelay
@@ -17491,7 +17711,7 @@ nm_ViciousCheck(){
 	}
 	if(VBState=2){
 	;temp:=(nowUnix()-VBLastKilled)
-		if((nowUnix()-VBLastKilled)<(600)) { ;it has been less than 10 minutes since VB was found
+		if(((nowUnix()-VBLastKilled)<(600))) { ;it has been less than 10 minutes since VB was found
 			if(nm_imgSearch("VBdeadSymbol2.png",1, "highright")[1]=0){
 				VBState:=0
 				VBLastKilled:=nowUnix()
@@ -17508,12 +17728,12 @@ nm_ViciousCheck(){
 				IniWrite SessionViciousKills, "settings\nm_config.ini", "Status", "SessionViciousKills"
 				killed := 1
 			}
-		} else { ;it has been greater than 10 minutes since VB was found
-				VBState:=0
-				;send VBState to background.ahk
-				PostSubmacroMessage("background", 0x5554, 3, VBState)
-				;nm_setStatus("VBState " . VBState, " <4>")
-				nm_setStatus("Aborted", "Vicious Fight > 10 Mins")
+		} else { ;it has been greater than threshold since VB was found
+			VBState:=0
+			;send VBState to background.ahk
+			PostSubmacroMessage("background", 0x5554, 3, VBState)
+			;nm_setStatus("VBState " . VBState, " <4>")
+			nm_setStatus("Aborted", "Vicious Fight > 10 Mins")
 		}
 	}
 	return killed
@@ -19352,6 +19572,8 @@ nm_BrownQuestProg(){
 					}
 
 					;//todo: detect if scrollbar is already at end before scrolling, or how much has scrolled instead of fixed 150. every quest needs this, should be in rewrite
+
+					; otherwise, scroll up
 					Gdip_DisposeImage(pBMScreen)
 					; scroll, but only if the questgiver name is in the lower part of the screen
 					if (yi > (wh - (windowHeight//2))) {
@@ -21892,12 +22114,12 @@ start(*){
 	global GlitterKey
 	GlitterKey:="None"
 	loop 6 {
-		slot:=A_Index+1
-		if(HotbarWhile%slot%="Glitter") {
-			GlitterKey:="sc00" slot+1
-			break
+			slot := A_Index + 1
+			if (HotbarWhile%slot% = "Glitter") {
+				GlitterKey := "sc00" slot + 1
+				break
+			}
 		}
-	}
 	;Snowflake
 	loop 6 {
 		slot:=A_Index+1
