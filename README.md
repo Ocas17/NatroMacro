@@ -1,11 +1,11 @@
-Verts tad sync port to 1.0.1 natro by some random
-Still WIP, use only for testing if you want (dm ocas17 on discord if you face some issues)
-todo list:
-fixing gather extend while gathering done
-fixing gather extend while converting
-gather extend before daily reconnect
-dice extend after glitter for almost 100% boosted field gathering uptime
-fixing tad sync
+Verts tad sync port to 1.0.1 natro by some random. <br>
+Still WIP, use only for testing if you want (dm ocas17 on discord if you face some issues) <br>
+todo list: <br>
+fixing gather extend while gathering done <br>
+fixing gather extend while converting <br>
+gather extend before daily reconnect <br>
+dice extend after glitter for almost 100% boosted field gathering uptime <br>
+fixing tad sync <br>
  
 
 
