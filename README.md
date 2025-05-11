@@ -6,7 +6,7 @@ fixing gather extend while converting <br>
 gather extend before daily reconnect <br>
 dice extend after glitter for almost 100% boosted field gathering uptime <br>
 fixing tad sync <br>
-deleting dependance of glitter extend on boosted fielf buffs checkbox <br>
+deleting dependance of glitter extend on boosted field buffs checkbox <br>
 
 
 
